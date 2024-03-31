@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
 using System.Text;
 using Path = System.IO.Path;
 
@@ -57,6 +58,23 @@ namespace DgfTxmConvert
                 config.OnExecute(() =>
                 {
                     ConvertDat(datPathArg.Value, outBaseArg.Value);
+                });
+            });
+
+            app.Command("decompress-dat", config =>
+            {
+                config.FullName = "Decompress DAT";
+                config.Description = "Converts compressed DAT to flat DAT.";
+
+                var datPathArg = config.Argument("datPath", "Path of the DAT to decompress").IsRequired();
+                datPathArg.Accepts().ExistingFile();
+                var outBaseArg = config.Argument("outBase", "Directory to write flat file");
+                outBaseArg.Accepts().LegalFilePath();
+                config.HelpOption();
+
+                config.OnExecute(() =>
+                {
+                    DecompressDat(datPathArg.Value, outBaseArg.Value);
                 });
             });
 
@@ -284,6 +302,9 @@ namespace DgfTxmConvert
                                 TxmConversion.ConvertImageToTxm(lineSplit[1], fs, level, bufferBase, paletteBufferBase);
                             }
 
+
+                            Console.WriteLine($"Replacing \"{line}\".");
+
                             builder.ReplacementEntries.Add(new DatBuilder.ReplacementEntry
                             {
                                 Index = imageIndex,
@@ -305,12 +326,27 @@ namespace DgfTxmConvert
                 }
             }
         }
+                
 
+        static void DecompressDat(string path, string outBase = null)
+        {
+            if (outBase == null) outBase = Path.GetDirectoryName(path);
+            Directory.CreateDirectory(outBase);
+
+            using (Stream ffs = Utils.CheckDecompress(File.OpenRead(path)))
+            using (var fileStream = File.Create(Path.Combine(outBase, Path.GetFileNameWithoutExtension(path) + $"_plain.dat")))
+            {
+                ffs.Seek(0, SeekOrigin.Begin);
+                ffs.CopyTo(fileStream);
+            }
+
+        }
 
         static void ConvertDat(string path, string outBase = null)
         {
             if (outBase == null) outBase = Path.GetDirectoryName(path);
             Directory.CreateDirectory(outBase);
+
             using (Stream fs = Utils.CheckDecompress(File.OpenRead(path)))
             using (DatReader dat = new DatReader(fs))
             {

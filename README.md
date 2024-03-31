@@ -28,6 +28,7 @@ option.
   far texture is extracted.
 - `convert-mapanim`: Converts files from the mapanim folder to Wavefront OBJ
   models.
+- `decompress-dat`: Converts compressed DAT to flat DAT.
 
 Other
 -----
