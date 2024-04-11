@@ -29,6 +29,7 @@ option.
 - `convert-mapanim`: Converts files from the mapanim folder to Wavefront OBJ
   models.
 - `decompress-dat`: Converts compressed DAT to flat DAT.
+- `convert-atx`: Convert ATX files to PNG files.
 
 Other
 -----

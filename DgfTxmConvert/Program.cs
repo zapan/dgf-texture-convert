@@ -114,6 +114,19 @@ namespace DgfTxmConvert
                 });
             });
 
+            app.Command("convert-atx", config =>
+            {
+                config.FullName = "Converts ATX to PNG";
+                config.Description = "Convert ATX files to PNG files";
+                var inPath = config.Argument("inPath", "path").IsRequired();
+                var filter = config.Argument("filter", "filter").IsRequired();
+                config.HelpOption();
+                config.OnExecute(() =>
+                {
+                    BulkConvertAtx(inPath.Value, filter.Value, false);
+                });
+            });
+
             app.Command("dump-font", config =>
             {
                 config.FullName = "Dump kanji font";
