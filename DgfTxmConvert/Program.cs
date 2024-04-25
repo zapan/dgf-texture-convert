@@ -16,8 +16,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Pipes;
 using System.Text;
+using AuroraLib.Compression;
+using AuroraLib.Compression.Algorithms;
+
 using Path = System.IO.Path;
 
 namespace DgfTxmConvert
@@ -75,6 +77,24 @@ namespace DgfTxmConvert
                 config.OnExecute(() =>
                 {
                     DecompressDat(datPathArg.Value, outBaseArg.Value);
+                });
+            });
+            
+            app.Command("allz-compressor", config =>
+            {
+                config.FullName = "Compress file with ALLZ";
+                config.Description = "Converts flat file to compressed.";
+
+                var datPathArg = config.Argument("datPath", "Path of the file to compress").IsRequired();
+                datPathArg.Accepts().ExistingFile();
+                var outPathArg = config.Argument("outBase", "Path of the output file");
+                outPathArg.Accepts().LegalFilePath();
+                
+                config.HelpOption();
+
+                config.OnExecute(() =>
+                {
+                    AllzCompressor(datPathArg.Value, outPathArg.Value);
                 });
             });
 
@@ -353,6 +373,17 @@ namespace DgfTxmConvert
                 ffs.CopyTo(fileStream);
             }
 
+        }
+       
+ 
+        static void AllzCompressor(string datPathArg, string outPathArg = null)
+        {
+            if (outPathArg == null)
+                outPathArg = Path.GetFullPath(datPathArg) + $"/output.dat";
+
+            using Stream sourceStr = File.OpenRead(datPathArg);
+            using var destStr = File.Create(outPathArg);
+            new ALLZ().Compress(sourceStr, destStr);
         }
 
         static void ConvertDat(string path, string outBase = null)
