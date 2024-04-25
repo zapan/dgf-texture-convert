@@ -19,6 +19,10 @@ using System.IO;
 using System.IO.Pipes;
 using System.Text;
 using Path = System.IO.Path;
+using System.Linq;
+using SixLabors.ImageSharp.Memory;
+using System.Runtime.InteropServices;
+
 
 namespace DgfTxmConvert
 {
@@ -143,6 +147,23 @@ namespace DgfTxmConvert
                 config.OnExecute(() =>
                 {
                     ExtractFontPack(pakPath.Value, txmPath.Value, outputPath.Value);
+                });
+            });
+            
+            app.Command("pack-font", config =>
+            {
+                config.FullName = "Pack kanji font";
+                config.Description = "Packs all characters from kanji font folder.";
+
+                var pakPath = config.Argument("pakPath", "Path of the kanji pack").IsRequired();
+                // pakPath.Accepts().ExistingFile();
+                var inputPath = config.Argument("inputPath", "Path of directory to import character images");
+                inputPath.Accepts().LegalFilePath();
+                config.HelpOption();
+
+                config.OnExecute(() =>
+                {
+                    CreateFontPack(pakPath.Value,  inputPath.Value);
                 });
             });
 
@@ -619,6 +640,78 @@ namespace DgfTxmConvert
                     }
                 }
             }
+        }
+
+        static void CreateFontPack(string pakPath, string basePath)
+        {
+            // Configurar la codificación de la consola a UTF-8
+            Console.OutputEncoding = Encoding.UTF8;
+
+            if (basePath == null) basePath = pakPath + "_extracted";
+
+            Encoding shiftJisEncoding = Encoding.GetEncoding(932);
+
+            using (Stream datFs = File.OpenWrite(pakPath))
+            {
+                var fontPak = new FontPack();
+
+                // Obtener los nombres de archivo del directorio
+                string[] nombresArchivos = Directory.GetFiles(basePath, "*.png");
+
+                // Iterar sobre cada nombre de archivo
+                foreach (string nombreArchivo in nombresArchivos)
+                {
+                    try {
+                        // Obtener el nombre del archivo sin la extensión ni la ruta
+                        //  char primerCaracter = Path.GetFileNameWithoutExtension(nombreArchivo)[0];
+
+                        string nombreShiftJis = shiftJisEncoding.GetString(Encoding.Default.GetBytes(nombreArchivo));
+                        char primerCaracter = nombreShiftJis[0];
+
+                        if (primerCaracter.ToString() == "") {
+                            primerCaracter = ' ';
+                        }
+
+                        // Leer el contenido del archivo
+                        // byte[] contenidoBytes = File.ReadAllBytes(nombreArchivo);
+
+
+                        using (Image<Rgba32> imagen = Image.Load<Rgba32>(nombreArchivo))
+                        {
+
+                            // Crear un buffer para almacenar los píxeles de la imagen
+                            Rgba32[] pixels = new Rgba32[imagen.Width * imagen.Height];
+
+                            // Crear un nuevo array de bytes del tamaño adecuado
+                            byte[] bytes = new byte[pixels.Length * 4]; // Cada píxel Rgba32 ocupa 4 bytes (RGBA)
+
+                            // Copiar los datos de los píxeles al array de bytes
+                            for (int i = 0; i < pixels.Length; i++)
+                            {
+                                bytes[i * 4] = pixels[i].R;
+                                bytes[i * 4 + 1] = pixels[i].G;
+                                bytes[i * 4 + 2] = pixels[i].B;
+                                bytes[i * 4 + 3] = pixels[i].A;
+                            }
+
+
+                            fontPak[primerCaracter] = bytes;
+
+
+                            // Ahora la imagen se ha cargado en el formato Rgba32
+                            Console.WriteLine("La imagen se ha cargado correctamente en formato Rgba32.");
+                        }
+
+
+                    } catch (Exception ex)  {
+                        Console.WriteLine("Error al leer archivos: " + ex.Message);
+                    }
+                }
+
+                fontPak.Write(datFs);
+            }
+
+        
         }
 
         static void ExtractTrm(string trmPath, string basePath = null)
